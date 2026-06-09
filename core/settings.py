@@ -37,6 +37,9 @@ INSTALLED_APPS = [
 
     "rest_framework",
     "corsheaders",
+    "knox",
+
+    "users",
 ]
 
 MIDDLEWARE = [
@@ -51,6 +54,7 @@ MIDDLEWARE = [
 ]
 
 REST_FRAMEWORK = {
+    "USER_SERIALIZER": "users.serializers.UserSerializer",
     "DEFAULT_AUTHENTICATION_CLASSES": ("knox.auth.TokenAuthentication",),
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
 }
@@ -129,6 +133,10 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 
 USE_TZ = True
+
+AUTH_USER_MODEL = "users.User"
+
+AUTHENTICATION_BACKENDS = ["users.backends.AuthBackend"]
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
