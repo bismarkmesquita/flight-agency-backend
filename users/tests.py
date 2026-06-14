@@ -17,13 +17,6 @@ class BaseUsersTestCase(BaseTestCase):
 
         self.now = timezone.now()
 
-        self.user_token, self.user = get_auth_header()
-        self.admin_token, self.admin = get_auth_header(role=User.Role.ADMIN)
-
-        self.seller_token, self.seller = get_auth_header(
-            role=User.Role.SELLER
-        )
-
 
 class LoginViewTests(BaseUsersTestCase):
     def setUp(self):
@@ -33,18 +26,18 @@ class LoginViewTests(BaseUsersTestCase):
         response = self.client.post(
             "/auth/login/",
             {
-                "login": self.user.email,
+                "login": self.seller.email,
                 "password": "123456789",
             },
         )
-        self.assertEqual(response.data["user"]["email"], self.user.email)
+        self.assertEqual(response.data["user"]["email"], self.seller.email)
 
     def test_validations(self):
         # try login with wrong password
         response = self.client.post(
             "/auth/login/",
             {
-                "login": self.user.email,
+                "login": self.seller.email,
                 "password": "wrong",
             },
         )
