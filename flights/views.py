@@ -8,6 +8,43 @@ from .models import Airline, Airport, Flight
 from .failures import CreateFlightFailureReason
 
 
+class GetAirlinesView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        airlines = Airline.objects.all()
+        data = [self.serializer(airline) for airline in airlines]
+
+        return Response({"success": True, "airlines": data})
+
+    def serializer(self, obj):
+        return {
+            "id": obj.id,
+            "name": obj.name,
+            "iata": obj.iata,
+        }
+
+
+class GetAirportsView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        airports = Airport.objects.all()
+        data = [self.serializer(airline) for airline in airports]
+
+        return Response({"success": True, "airports": data})
+
+    def serializer(self, obj):
+        return {
+            "id": obj.id,
+            "name": obj.name,
+            "iata": obj.iata,
+            "icao": obj.icao,
+            "city": obj.city,
+            "country": obj.country,
+        }
+
+
 class CreateFlightView(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 

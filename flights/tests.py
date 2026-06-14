@@ -5,6 +5,44 @@ from flights.failures import CreateFlightFailureReason
 from flights.models import Flight
 
 
+class GetAirlinesTests(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+
+    def test_get_airlines_list(self):
+        """try get airlines list."""
+        response = self.client.get(
+            "/flights/airlines/", headers=self.admin_token)
+
+        self.assertTrue(response.data["success"])
+        self.assertEqual(len(response.data["airlines"]), 1)
+
+    def test_cannot_access_whithout_auth(self):
+        """try accessing without authentication."""
+        response = self.client.get("/flights/airlines/")
+
+        assert response.status_code == 401
+
+
+class GetAirportsTests(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+
+    def test_get_airports_list(self):
+        """try get airports list."""
+        response = self.client.get(
+            "/flights/airports/", headers=self.admin_token)
+
+        self.assertTrue(response.data["success"])
+        self.assertEqual(len(response.data["airports"]), 2)
+
+    def test_cannot_access_whithout_auth(self):
+        """try accessing without authentication."""
+        response = self.client.get("/flights/airports/")
+
+        assert response.status_code == 401
+
+
 class CreateFlightTests(BaseTestCase):
     def setUp(self):
         super().setUp()
