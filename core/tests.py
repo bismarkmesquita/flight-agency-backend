@@ -1,15 +1,52 @@
 from django.test import TestCase
-from faker import Faker
-from django.conf import settings
-import logging
+from django.utils import timezone
+from flights.models import Airline, Airport, Flight
+from users.models import User
+from utils.test_utils import get_auth_header
 
 
 class BaseTestCase(TestCase):
-    def setUp(self) -> None:
-        settings.DEBUG = True
+    def setUp(self):
+        super().setUp()
 
-        self.fake = Faker()
+        self.admin_token, self.admin = get_auth_header(role=User.Role.ADMIN)
+        self.manager_token, self.manager = get_auth_header(
+            role=User.Role.MANAGER
+        )
+        self.seller_token, self.seller = get_auth_header(
+            role=User.Role.SELLER
+        )
 
-        logger = logging.getLogger("django.request")
-        self.previous_level = logger.getEffectiveLevel()
-        logger.setLevel(logging.ERROR)
+        self.airline = Airline.objects.create(
+            name="Companhia Aérea 1",
+            iata="LA"
+        )
+
+        self.departure_airport = Airport.objects.create(
+            iata="AI1",
+            icao="AI10",
+            name="Airport 1",
+            city="City 1",
+            country="Country 1",
+        )
+
+        self.arrival_airport = Airport.objects.create(
+            iata="AI2",
+            icao="AI20",
+            name="Airport 2",
+            city="City 2",
+            country="Country 2",
+        )
+
+        self.flight = Flight.objects.create(
+            flight_number="100",
+            airline=self.airline,
+            departure_date=timezone.make_aware(
+                timezone.datetime(2025, 8, 21, 0, 0, 0)
+            ),
+            arrival_date=timezone.make_aware(
+                timezone.datetime(2025, 8, 22, 0, 0, 0)
+            ),
+            departure_airport=self.departure_airport,
+            arrival_airport=self.arrival_airport,
+        )
