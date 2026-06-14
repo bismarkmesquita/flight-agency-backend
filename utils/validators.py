@@ -110,30 +110,6 @@ def validate_list(val: object, field_name: str, required: bool = True) -> list:
     return val or []
 
 
-def validate_phone_number(val: str, field_name: str) -> str:
-    """
-    Validates a phone number.
-
-    :param val: The value to be validated.
-    :param field_name: The name of the field to be validated.
-    :return: The validated number.
-    """
-    val = validate_string(val, "phone_number")
-
-    if not re.match(
-        r"^(?:(?:\+|00)55)?(?:\s*\(?)(?:0?\d{2})?(?:\)?\s*)(?:[-\s]?)(?:\d{4,5})(?:[-\s]?)(?:\d{4})$",
-        val,
-    ):
-        raise ValidationError(f"{field_name} must be a phone number (string)")
-
-    val = val.replace(" ", "")
-    val = val.replace("(", "")
-    val = val.replace(")", "")
-    val = val.replace("-", "")
-
-    return val or None
-
-
 def validate_cpf_number(val: str, field_name: str = "cpf"):
     """
     Validate a cpf number.

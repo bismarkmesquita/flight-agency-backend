@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.utils import timezone
+from agency.models import Customer
 from flights.models import Airline, Airport, Flight
 from users.models import User
 from utils.test_utils import get_auth_header
@@ -15,6 +16,12 @@ class BaseTestCase(TestCase):
         )
         self.seller_token, self.seller = get_auth_header(
             role=User.Role.SELLER
+        )
+
+        self.customer = Customer.objects.create(
+            name="Customer",
+            email="customer@email.com",
+            phone="11999999999"
         )
 
         self.airline = Airline.objects.create(

@@ -1,0 +1,8 @@
+import enum
+
+
+class CreateCustomerFailureReason(enum.Enum):
+    INVALID_CUSTOMER = "INVALID_CUSTOMER"
+    MISSING_FIELDS = "MISSING_FIELDS"
+    INVALID_EMAIL = "INVALID_EMAIL"
+    ALREADY_REGISTERED = "ALREADY_REGISTERED"
