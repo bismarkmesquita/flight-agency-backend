@@ -8,7 +8,6 @@ from users.models import (
     InternalLog,
     User,
 )
-from utils.test_utils import get_auth_header
 
 
 class BaseUsersTestCase(BaseTestCase):
