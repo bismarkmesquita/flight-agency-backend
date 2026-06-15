@@ -43,6 +43,38 @@ class GetAirportsTests(BaseTestCase):
         assert response.status_code == 401
 
 
+class NextFlightsTests(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+
+        Flight.objects.create(
+            flight_number="100",
+            airline=self.airline,
+            departure_date=timezone.now() + timezone.timedelta(days=1),
+            arrival_date=timezone.now() + timezone.timedelta(days=2),
+            departure_airport=self.departure_airport,
+            arrival_airport=self.arrival_airport,
+        )
+
+    def test_get_flights_list(self):
+        """try get next flights list"""
+
+        response = self.client.get(
+            "/flights/next/",
+            headers=self.admin_token
+        )
+
+        self.assertTrue(response.data["success"])
+        self.assertEqual(len(response.data["flights"]), 1)
+
+    def test_cannot_access_whithout_auth(self):
+        """try accessing without authentication."""
+
+        response = self.client.get("/flights/next/")
+
+        assert response.status_code == 401
+
+
 class CreateFlightTests(BaseTestCase):
     def setUp(self):
         super().setUp()
@@ -68,7 +100,7 @@ class CreateFlightTests(BaseTestCase):
 
         Flight.objects.all().delete()
         response = self.client.post(
-            "/flights/create-flight/",
+            "/flights/",
             data=self.data,
             headers=self.admin_token,
         )
@@ -85,7 +117,7 @@ class CreateFlightTests(BaseTestCase):
 
         data = {"flight_number": "1570"}
         response = self.client.post(
-            "/flights/create-flight/",
+            "/flights/",
             data=data,
             headers=self.admin_token,
         )
@@ -101,7 +133,7 @@ class CreateFlightTests(BaseTestCase):
 
         self.data["flight_number"] = "BA"
         response = self.client.post(
-            "/flights/create-flight/",
+            "/flights/",
             data=self.data,
             headers=self.admin_token,
         )
@@ -117,7 +149,7 @@ class CreateFlightTests(BaseTestCase):
 
         self.data["airline_id"] = 9999
         response = self.client.post(
-            "/flights/create-flight/",
+            "/flights/",
             data=self.data,
             headers=self.admin_token,
         )
@@ -133,7 +165,7 @@ class CreateFlightTests(BaseTestCase):
 
         self.data["departure_airport_id"] = 9999
         response = self.client.post(
-            "/flights/create-flight/",
+            "/flights/",
             data=self.data,
             headers=self.admin_token,
         )
@@ -149,7 +181,7 @@ class CreateFlightTests(BaseTestCase):
 
         self.data["departure_date"] = "03/01/2002"
         response = self.client.post(
-            "/flights/create-flight/",
+            "/flights/",
             data=self.data,
             headers=self.admin_token,
         )
@@ -173,7 +205,7 @@ class CreateFlightTests(BaseTestCase):
         Flight.objects.create(**data)
 
         response = self.client.post(
-            "/flights/create-flight/",
+            "/flights/",
             data=data,
             headers=self.admin_token,
         )
@@ -188,7 +220,7 @@ class CreateFlightTests(BaseTestCase):
         self.data["arrival_airport_id"] = (self.departure_airport.id)
 
         response = self.client.post(
-            "/flights/create-flight/",
+            "/flights/",
             data=self.data,
             headers=self.admin_token,
         )
@@ -207,7 +239,7 @@ class CreateFlightTests(BaseTestCase):
         )
 
         response = self.client.post(
-            "/flights/create-flight/",
+            "/flights/",
             data=self.data,
             headers=self.admin_token,
         )
