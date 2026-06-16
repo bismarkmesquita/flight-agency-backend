@@ -1,12 +1,9 @@
 from django.utils import timezone
 from core.tests import BaseTestCase
+from users.models import InternalLog, User
 from users.failures import (
     CreateOrUpdateUserFailureReason,
     LoginViewFailureReason,
-)
-from users.models import (
-    InternalLog,
-    User,
 )
 
 
@@ -251,7 +248,7 @@ class GetUsersViewTests(BaseUsersTestCase):
         response = self.client.get("/auth/users/", headers=self.admin_token)
 
         self.assertTrue(response.data["success"])
-        self.assertEqual(len(response.data["users"]), 2)
+        self.assertEqual(len(response.data["users"]), 3)
 
     def test_cannot_access_whithout_auth(self):
         # try accessing without authentication.

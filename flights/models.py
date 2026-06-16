@@ -46,7 +46,7 @@ class Flight(BaseModel):
         on_delete=models.PROTECT,
     )
     departure_date = models.DateTimeField(db_index=True)
-    arrival_date = models.DateTimeField(null=True, blank=True)
+    arrival_date = models.DateTimeField()
     departure_airport = models.ForeignKey(
         Airport,
         on_delete=models.PROTECT,
@@ -56,8 +56,6 @@ class Flight(BaseModel):
         Airport,
         on_delete=models.PROTECT,
         related_name="arrivals",
-        null=True,
-        blank=True,
     )
 
     @property

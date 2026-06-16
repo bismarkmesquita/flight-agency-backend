@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.utils import timezone
+from agency.models import Customer, Reservation, Sale, Supplier
 from flights.models import Airline, Airport, Flight
 from users.models import User
 from utils.test_utils import get_auth_header
@@ -15,6 +16,29 @@ class BaseTestCase(TestCase):
         )
         self.seller_token, self.seller = get_auth_header(
             role=User.Role.SELLER
+        )
+        self.issuer_token, self.issuer = get_auth_header(
+            role=User.Role.SELLER
+        )
+
+        self.customer = Customer.objects.create(
+            name="Customer",
+            email="customer@email.com",
+            phone="11999999999"
+        )
+
+        self.supplier = Supplier.objects.create(
+            name="Supplier",
+            tax_id="12345678900012",
+            phone="4522674169",
+            country="Brazil",
+            postal_code="500000",
+            neighborhood="neighborhood",
+            city="city",
+            state="state",
+            address="address",
+            address_number="100",
+            complement="complement",
         )
 
         self.airline = Airline.objects.create(
@@ -50,3 +74,24 @@ class BaseTestCase(TestCase):
             departure_airport=self.departure_airport,
             arrival_airport=self.arrival_airport,
         )
+
+        self.sale = Sale.objects.create(
+            seller=self.seller,
+            customer=self.customer,
+            type=Sale.Type.B2B,
+            payment=Sale.Payment.CREDIT_CARD,
+            amount_received=300,
+            cost=200,
+            sale_date=timezone.now(),
+            indication="Melina"
+        )
+
+        self.reservation = Reservation.objects.create(
+            locator="LA1234",
+            sale=self.sale,
+            passenger_count=2,
+            passengers="Melina, Torrent",
+            supplier=self.supplier,
+            issuer=self.issuer,
+        )
+        self.reservation.flights.add(self.flight)
