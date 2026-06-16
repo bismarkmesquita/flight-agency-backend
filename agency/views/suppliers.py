@@ -59,7 +59,6 @@ class SupplierMixin:
             )
 
         name = data["name"]
-        tax_id = data["tax_id"]
         phone = data["phone"]
         country = data["country"]
         postal_code = data["postal_code"]
@@ -69,6 +68,7 @@ class SupplierMixin:
         address = data["address"]
         address_number = data["address_number"]
 
+        tax_id = data.get("tax_id")
         complement = data.get("complement")
 
         filters = Q()
@@ -132,7 +132,7 @@ class CreateSupplierView(SupplierMixin, APIView):
         return Response({
             "success": True,
             "message": "Supplier successfully registered.",
-            "supplier_id": supplier.id,
+            "supplier": self.serializer(supplier),
         })
 
 
