@@ -18,3 +18,12 @@ class CreateSaleFailureReason(enum.Enum):
     MISSING_FIELDS = "MISSING_FIELDS"
     OBJECT_NOT_FOUND = "OBJECT_NOT_FOUND"
     VALIDATION_ERROR = "VALIDATION_ERROR"
+
+
+class CreateSupplierFailureReason(enum.Enum):
+    MISSING_FIELDS = "MISSING_FIELDS"
+    ALREADY_REGISTERED = "ALREADY_REGISTERED"
+
+
+class SupplierFailureReason(enum.Enum):
+    INVALID_SUPPLIER = "INVALID_SUPPLIER"

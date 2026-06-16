@@ -135,7 +135,7 @@ class CustomerView(CustomerMixin, APIView):
 
         return Response({
             "success": True,
-            "message": "Client updated successfully.",
+            "message": "Customer updated successfully.",
             "customer": self.serializer(customer),
         })
 
@@ -145,7 +145,8 @@ class CustomerView(CustomerMixin, APIView):
         if not customer:
             return self.customer_not_found()
 
-        customer.delete()
+        customer.is_active = False
+        customer.save()
 
         return Response({
             "success": True,

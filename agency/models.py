@@ -15,6 +15,10 @@ class Customer(BaseModel):
         null=True,
         verbose_name="WhatsApp"
     )
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+    )
 
     def __str__(self):
         return self.name
@@ -45,6 +49,10 @@ class Supplier(BaseModel):
         max_length=100,
         blank=True,
         null=True,
+    )
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
     )
 
     def __str__(self):

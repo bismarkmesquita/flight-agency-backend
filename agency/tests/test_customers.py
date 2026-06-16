@@ -73,17 +73,15 @@ class DeleteCustomerTests(BaseTestCase):
         return f"/agency/customers/{customer_id}/"
 
     def test_delete_customer_success(self):
-        customer_id = self.customer.id
-
         response = self.client.delete(
-            self.get_url(customer_id),
+            self.get_url(self.customer.id),
             headers=self.admin_token,
         )
 
         self.assertTrue(response.data["success"])
-        self.assertFalse(
-            Customer.objects.filter(id=customer_id).exists()
-        )
+
+        self.customer.refresh_from_db()
+        self.assertFalse(self.customer.is_active)
 
     def test_delete_customer_not_found(self):
         response = self.client.delete(

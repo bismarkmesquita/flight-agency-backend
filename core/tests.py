@@ -28,8 +28,17 @@ class BaseTestCase(TestCase):
         )
 
         self.supplier = Supplier.objects.create(
-            name="Supplier 1",
-            tax_id="12345678900012"
+            name="Supplier",
+            tax_id="12345678900012",
+            phone="4522674169",
+            country="Brazil",
+            postal_code="500000",
+            neighborhood="neighborhood",
+            city="city",
+            state="state",
+            address="address",
+            address_number="100",
+            complement="complement",
         )
 
         self.airline = Airline.objects.create(
