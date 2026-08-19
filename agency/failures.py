@@ -12,12 +12,7 @@ class CreateReservationFailureReason(enum.Enum):
     MISSING_FIELDS = "MISSING_FIELDS"
     OBJECT_NOT_FOUND = "OBJECT_NOT_FOUND"
     ALREADY_REGISTERED = "ALREADY_REGISTERED"
-
-
-class CreateSaleFailureReason(enum.Enum):
-    MISSING_FIELDS = "MISSING_FIELDS"
-    OBJECT_NOT_FOUND = "OBJECT_NOT_FOUND"
-    VALIDATION_ERROR = "VALIDATION_ERROR"
+    VALIDATION_ERROR = "VALIDATION_ERROR"    
 
 
 class CreateSupplierFailureReason(enum.Enum):

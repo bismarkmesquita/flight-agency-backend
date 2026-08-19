@@ -6,8 +6,9 @@ from django.db.models import Prefetch
 from core.utils import get_object_or_none
 from users.models import User
 from flights.models import Flight
-from agency.models import Reservation, Sale, Supplier
+from agency.models import Customer, Reservation, Sale, Supplier
 from agency.failures import CreateReservationFailureReason
+from decimal import Decimal, InvalidOperation
 
 
 class ReservationMixin:
@@ -60,9 +61,33 @@ class ReservationMixin:
             "reason": reason,
         })
 
-    def validate_data(self, data):
-        required_fields = [
-            "sale_id",
+    def validate_data(self, data, user):
+        sale_data = data.get("sale")
+        reservation_data = data.get("reservation")
+
+        if not isinstance(sale_data, dict):
+            return None, self.error_response(
+                "Sale data must be an object.",
+                CreateReservationFailureReason.MISSING_FIELDS.value,
+            )
+
+        if not isinstance(reservation_data, dict):
+            return None, self.error_response(
+                "Reservation data must be an object.",
+                CreateReservationFailureReason.MISSING_FIELDS.value,
+            )
+
+        sale_required_fields = [
+            "seller_id",
+            "customer_id",
+            "type",
+            "payment",
+            "amount_received",
+            "cost",
+            "sale_date",
+        ]
+
+        reservation_required_fields = [
             "locator",
             "passengers",
             "passenger_count",
@@ -71,35 +96,76 @@ class ReservationMixin:
             "flight_ids",
         ]
 
-        missing_fields = [
+        missing_sale_fields = [
             field
-            for field in required_fields
-            if data.get(field) is None
+            for field in sale_required_fields
+            if sale_data.get(field) is None
         ]
 
-        if missing_fields:
+        if missing_sale_fields:
             return None, self.error_response(
-                f"Campos obrigatórios: {', '.join(missing_fields)}",
+                f"Required sale fields: {', '.join(missing_sale_fields)}",
                 CreateReservationFailureReason.MISSING_FIELDS.value,
             )
 
-        sale_id = data["sale_id"]
-        locator = data["locator"]
-        passenger_count = data["passenger_count"]
-        supplier_id = data["supplier_id"]
-        flight_ids = data["flight_ids"]
-        issuer_id = data["issuer_id"]
-        passengers = data["passengers"]
+        missing_reservation_fields = [
+            field
+            for field in reservation_required_fields
+            if reservation_data.get(field) is None
+        ]
 
-        # Validade sale
-        sale = get_object_or_none(Sale, id=sale_id)
-        if not sale:
+        if missing_reservation_fields:
             return None, self.error_response(
-                "Sale not found.",
+                f"Required reservation fields: {', '.join(missing_reservation_fields)}",
+                CreateReservationFailureReason.MISSING_FIELDS.value,
+            )
+
+        # Validade sale values
+        cost = sale_data["cost"]
+        amount_received = sale_data["amount_received"]
+        try:
+            amount_received = Decimal(str(amount_received))
+            cost = Decimal(str(cost))
+        except InvalidOperation:
+            return None, self.error_response(
+                "Invalid numeric values.",
+                CreateReservationFailureReason.VALIDATION_ERROR.value,
+            )
+
+        if amount_received <= 0:
+            return None, self.error_response(
+                "Amount received must be greater than zero.",
+                CreateReservationFailureReason.VALIDATION_ERROR.value,
+            )
+
+        if cost < 0:
+            return None, self.error_response(
+                "Cost cannot be negative.",
+                CreateReservationFailureReason.VALIDATION_ERROR.value,
+            )
+
+        # Validade seller
+        if user.role == User.Role.SELLER:
+            seller = user
+        else:
+            seller = get_object_or_none(User, id=sale_data["seller_id"])
+
+            if not seller:
+                return None, self.error_response(
+                    "Seller not found.",
+                    CreateReservationFailureReason.OBJECT_NOT_FOUND.value
+                )
+
+        # Validade customer
+        customer = get_object_or_none(Customer, id=sale_data["customer_id"])
+        if not customer:
+            return None, self.error_response(
+                "Customer not found.",
                 CreateReservationFailureReason.OBJECT_NOT_FOUND.value
             )
 
         # Validade supplier
+        supplier_id = reservation_data["supplier_id"]
         supplier = get_object_or_none(Supplier, id=supplier_id)
         if not supplier:
             return None, self.error_response(
@@ -108,6 +174,7 @@ class ReservationMixin:
             )
 
         # Validade issuer
+        issuer_id = reservation_data["issuer_id"]
         issuer = get_object_or_none(User, id=issuer_id)
         if not issuer:
             return None, self.error_response(
@@ -116,6 +183,7 @@ class ReservationMixin:
             )
 
         # Validade locator
+        locator = reservation_data["locator"]
         if Reservation.objects.filter(locator=locator).exists():
             return None, self.error_response(
                 "A reservation already exists with the provided locator number.",
@@ -123,6 +191,7 @@ class ReservationMixin:
             )
 
         # Validade flights
+        flight_ids = reservation_data["flight_ids"]
         flights = list(Flight.objects.filter(id__in=set(flight_ids)))
         if len(flights) != len(set(flight_ids)):
             return None, self.error_response(
@@ -130,14 +199,28 @@ class ReservationMixin:
                 CreateReservationFailureReason.OBJECT_NOT_FOUND.value
             )
 
+        passengers = reservation_data["passengers"]
+        passenger_count = reservation_data["passenger_count"]
+
         return {
-            "sale": sale,
-            "issuer": issuer,
-            "locator": locator,
-            "supplier": supplier,
-            "passengers": passengers,
-            "passenger_count": passenger_count,
-            "flights": flights,
+            "sale": {
+                "seller": seller,
+                "customer": customer,
+                "type": sale_data["type"],
+                "payment": sale_data["payment"],
+                "amount_received": sale_data["amount_received"],
+                "cost": sale_data["cost"],
+                "sale_date": sale_data["sale_date"],
+                "indication": sale_data.get("indication"),
+            },
+            "reservation": {
+                "locator": locator,
+                "passengers": passengers,
+                "passenger_count": passenger_count,
+                "supplier": supplier,
+                "issuer": issuer,
+                "flights": flights,
+            },
         }, None
 
 
@@ -178,19 +261,28 @@ class ReservationsView(ReservationMixin, APIView):
         return Response({"success": True, "items": data})
 
     def post(self, request):
-        data, error = self.validate_data(request.data)
+        data, error = self.validate_data(request.data, request.user)
 
         if error:
             return error
 
-        flights = data.pop("flights")
+        sale_data = data["sale"]
+        reservation_data = data["reservation"]
+        flights = reservation_data.pop("flights")
 
         with transaction.atomic():
-            reservation = Reservation.objects.create(**data)
+            sale = Sale.objects.create(**sale_data)
+
+            reservation = Reservation.objects.create(
+                sale=sale,
+                **reservation_data,
+            )
+
             reservation.flights.set(flights)
 
         return Response({
             "success": True,
             "message": "Reservation successfully registered.",
             "reservation_id": reservation.id,
+            "sale_id": sale.id,
         })

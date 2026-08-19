@@ -42,7 +42,7 @@ class BaseTestCase(TestCase):
         )
 
         self.airline = Airline.objects.create(
-            name="Companhia Aérea 1",
+            name="Airline",
             iata="LA"
         )
 
@@ -82,7 +82,7 @@ class BaseTestCase(TestCase):
             payment=Sale.Payment.CREDIT_CARD,
             amount_received=300,
             cost=200,
-            sale_date=timezone.now(),
+            sale_date=timezone.now().date(),
             indication="Melina"
         )
 
