@@ -9,6 +9,7 @@ from flights.models import Flight
 from agency.models import Customer, Reservation, Sale, Supplier
 from agency.failures import CreateReservationFailureReason
 from decimal import Decimal, InvalidOperation
+from django.utils.dateparse import parse_date
 
 
 class ReservationMixin:
@@ -162,6 +163,14 @@ class ReservationMixin:
             return None, self.error_response(
                 "Customer not found.",
                 CreateReservationFailureReason.OBJECT_NOT_FOUND.value
+            )
+
+        # Validate sale date
+        sale_date = parse_date(sale_data["sale_date"])
+        if not sale_date:
+            return None, self.error_response(
+                "Invalid sale date.",
+                CreateReservationFailureReason.VALIDATION_ERROR.value,
             )
 
         # Validade supplier
