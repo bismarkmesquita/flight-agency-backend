@@ -90,7 +90,6 @@ class ReservationMixin:
 
         reservation_required_fields = [
             "locator",
-            "passengers",
             "passenger_count",
             "supplier_id",
             "issuer_id",
