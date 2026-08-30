@@ -207,7 +207,7 @@ class ReservationMixin:
                 CreateReservationFailureReason.OBJECT_NOT_FOUND.value
             )
 
-        passengers = reservation_data["passengers"]
+        passengers = reservation_data.get("passengers")
         passenger_count = reservation_data["passenger_count"]
 
         return {
