@@ -1,5 +1,5 @@
 from agency.failures import CreateReservationFailureReason
-from agency.models import Reservation
+from agency.models import Reservation, Sale
 from core.tests import BaseTestCase
 
 
@@ -39,13 +39,24 @@ class CreateReservationTests(BaseTestCase):
         super().setUp()
 
         self.data = {
-            "locator": "ABC123",
-            "sale_id": self.sale.id,
-            "flight_ids": [self.flight.id],
-            "supplier_id": self.supplier.id,
-            "issuer_id": self.issuer.id,
-            "passenger_count": 2,
-            "passengers": "Passenger 1, Passenger 2",
+            "sale": {
+                "seller_id": self.sale.seller.id,
+                "customer_id": self.sale.customer.id,
+                "type": self.sale.type,
+                "payment": self.sale.payment,
+                "amount_received": self.sale.amount_received,
+                "cost": self.sale.cost,
+                "sale_date": self.sale.sale_date.isoformat(),
+                "indication": self.sale.indication,
+            },
+            "reservation": {
+                "locator": "ABC123",
+                "flight_ids": [self.flight.id],
+                "supplier_id": self.supplier.id,
+                "issuer_id": self.issuer.id,
+                "passenger_count": 2,
+                "passengers": "Passenger 1, Passenger 2",
+            }
         }
 
         self.url = "/agency/reservations/"
@@ -56,27 +67,49 @@ class CreateReservationTests(BaseTestCase):
         self.assertEqual(response.status_code, 401)
 
     def test_create_reservation_success(self):
-        """Create reservation successfully"""
+        """Create sale and reservation successfully"""
+
+        sale_count = Sale.objects.count()
+        reservation_count = Reservation.objects.count()
+
         response = self.client.post(
             self.url,
             data=self.data,
+            content_type="application/json",
             headers=self.admin_token,
         )
 
         self.assertTrue(response.data["success"])
-        reservation = Reservation.objects.get(locator="ABC123")
 
-        self.assertEqual(reservation.sale, self.sale)
+        self.assertEqual(Sale.objects.count(), sale_count + 1)
+        self.assertEqual(Reservation.objects.count(), reservation_count + 1)
+
+        reservation = Reservation.objects.get(locator="ABC123")
+        sale = reservation.sale
+
+        self.assertNotEqual(sale.id, self.sale.id)
+        self.assertEqual(sale.seller, self.sale.seller)
+        self.assertEqual(sale.customer, self.sale.customer)
+        self.assertEqual(sale.type, self.sale.type)
+        self.assertEqual(sale.payment, self.sale.payment)
+        self.assertEqual(sale.amount_received, self.sale.amount_received)
+        self.assertEqual(sale.cost, self.sale.cost)
+        self.assertEqual(sale.sale_date, self.sale.sale_date)
+
         self.assertEqual(reservation.supplier, self.supplier)
+        self.assertEqual(reservation.issuer, self.issuer)
+        self.assertEqual(reservation.passenger_count, 2)
+        self.assertEqual(reservation.passengers, "Passenger 1, Passenger 2")
         self.assertEqual(reservation.flights.count(), 1)
         self.assertEqual(reservation.flights.first().id, self.flight.id)
 
     def test_missing_fields(self):
         """Required fields are missing"""
-        data = {"locator": "ABC123"}
+        data = {"sale": self.data["sale"]}
         response = self.client.post(
             self.url,
             data=data,
+            content_type="application/json",
             headers=self.admin_token,
         )
 
@@ -86,13 +119,65 @@ class CreateReservationTests(BaseTestCase):
             CreateReservationFailureReason.MISSING_FIELDS.value
         )
 
-    def assert_related_entity_not_found(self, field, value):
+    def assert_validated_sale_data(
+        self,
+        field,
+        value,
+        expected_message,
+    ):
         data = self.data.copy()
-        data[field] = value
+        data["sale"][field] = value
 
         response = self.client.post(
             self.url,
             data=data,
+            content_type="application/json",
+            headers=self.admin_token,
+        )
+
+        data = response.data
+
+        self.assertFalse(data["success"])
+        self.assertIn(expected_message, data["message"])
+        self.assertEqual(
+            response.data["reason"],
+            CreateReservationFailureReason.VALIDATION_ERROR.value
+        )
+
+    def test_invalid_amount_received(self):
+        """Invalid amount_received format."""
+
+        self.assert_validated_sale_data(
+            "amount_received", "amount_received",
+            "Invalid numeric values.",
+        )
+
+        self.assert_validated_sale_data(
+            "amount_received", 0,
+            "Amount received must be greater than zero.",
+        )
+
+    def test_invalid_cost(self):
+        """Invalid cost format."""
+
+        self.assert_validated_sale_data(
+            "cost", "cost",
+            "Invalid numeric values.",
+        )
+
+        self.assert_validated_sale_data(
+            "cost", -100,
+            "Cost cannot be negative.",
+        )
+
+    def assert_related_entity_not_found(self, field, value):
+        data = self.data.copy()
+        data["reservation"][field] = value
+
+        response = self.client.post(
+            self.url,
+            data=data,
+            content_type="application/json",
             headers=self.admin_token,
         )
 
@@ -101,9 +186,6 @@ class CreateReservationTests(BaseTestCase):
             response.data["reason"],
             CreateReservationFailureReason.OBJECT_NOT_FOUND.value
         )
-
-    def test_sale_not_found(self):
-        self.assert_related_entity_not_found("sale_id", 9999)
 
     def test_supplier_not_found(self):
         self.assert_related_entity_not_found("supplier_id", 9999)
@@ -130,6 +212,7 @@ class CreateReservationTests(BaseTestCase):
         response = self.client.post(
             self.url,
             data=self.data,
+            content_type="application/json",
             headers=self.admin_token,
         )
 
@@ -138,3 +221,47 @@ class CreateReservationTests(BaseTestCase):
             response.data["reason"],
             CreateReservationFailureReason.ALREADY_REGISTERED.value
         )
+
+    def test_sale_is_not_created_when_reservation_fails(self):
+        sale_count = Sale.objects.count()
+
+        data = self.data.copy()
+        data["reservation"] = self.data["reservation"].copy()
+        data["reservation"]["supplier_id"] = 9999
+
+        response = self.client.post(
+            self.url,
+            data=data,
+            content_type="application/json",
+            headers=self.admin_token,
+        )
+
+        self.assertFalse(response.data["success"])
+
+        self.assertEqual(Sale.objects.count(), sale_count)
+
+        self.assertFalse(
+            Reservation.objects.filter(
+                locator="ABC123"
+            ).exists()
+        )
+
+    def test_seller_uses_his_only_id(self):
+        data = self.data.copy()
+        data["sale"]["seller_id"] = self.issuer.id
+
+        Reservation.objects.all().delete()
+        Sale.objects.all().delete()
+
+        response = self.client.post(
+            self.url,
+            data=data,
+            content_type="application/json",
+            headers=self.seller_token,
+        )
+
+        self.assertTrue(response.data["success"])
+
+        sale = Sale.objects.get(id=response.data["sale_id"])
+
+        self.assertEqual(sale.seller, self.seller)

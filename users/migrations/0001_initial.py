@@ -94,7 +94,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
-                ("name", models.CharField(max_length=255, verbose_name="Nome")),
+                ("name", models.CharField(max_length=255)),
                 ("email", models.EmailField(max_length=254, unique=True)),
                 ("last_access", models.DateTimeField(blank=True, null=True)),
                 (

@@ -14,14 +14,9 @@ class AirportAdmin(admin.ModelAdmin):
 
 
 class FlightAdmin(admin.ModelAdmin):
-    list_display = ["iata", "airline", "departure_date", "arrival_date"]
+    list_display = ["flight_number", "airline", "departure_date", "arrival_date"]
     list_filter = ["airline"]
-    search_fields = [
-        "iata",
-        "airline__name",
-        "departure_airport",
-        "arrival_airport"
-    ]
+    search_fields = ["flight_number", "airline__name"]
     ordering = ["-departure_date"]
 
 
