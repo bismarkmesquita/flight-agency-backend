@@ -50,7 +50,7 @@ class DashboardView(APIView):
         if user.role in [User.Role.ADMIN, User.Role.MANAGER]:
             return query, "admin"
 
-        if user.role is User.Role.SELLER:
+        if user.role == User.Role.SELLER:
             return query.filter(seller=user), "seller"
 
         return query.none(), "seller"
@@ -65,7 +65,7 @@ class DashboardView(APIView):
         if user.role in [User.Role.ADMIN, User.Role.MANAGER]:
             return query
 
-        if user.role is User.Role.SELLER:
+        if user.role == User.Role.SELLER:
             return query.filter(sale__seller=user)
 
         return query.none()
