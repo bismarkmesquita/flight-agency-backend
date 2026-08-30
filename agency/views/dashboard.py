@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions
 from datetime import date, timedelta, datetime
-from agency.models import Sale
+from agency.models import Reservation, Sale
 from users.models import User
 
 
@@ -55,7 +55,22 @@ class DashboardView(APIView):
 
         return query.none(), "seller"
 
-    def get_kpis(self, query, mode):
+    def get_reservation_queryset(self, request, start_date, end_date):
+        query = Reservation.objects.filter(
+            sale__sale_date__range=[start_date, end_date]
+        )
+
+        user = request.user
+
+        if user.role in [User.Role.ADMIN, User.Role.MANAGER]:
+            return query
+
+        if user.role is User.Role.SELLER:
+            return query.filter(sale__seller=user)
+
+        return query.none()
+
+    def get_kpis(self, query, reservation_query, mode):
         aggregated = query.aggregate(
             total_sold=Sum("amount_received"),
             total_profit=Sum(F("amount_received") - F("cost")),
@@ -72,6 +87,7 @@ class DashboardView(APIView):
         data = {
             "total_sold": total_sold,
             "total_sales": total_sales,
+            "total_reservations": reservation_query.count(),
             "avg_ticket": float(avg_ticket)
         }
 
@@ -127,10 +143,10 @@ class DashboardView(APIView):
 
         return data
 
-    def get_tables(self, query, mode):
+    def get_tables(self, query, reservation_query, mode):
         if mode == "admin":
-            sellers = (
-                query.values("seller__name")
+            sellers_query = (
+                query.values("seller_id", "seller__name")
                 .annotate(
                     total_value=Sum("amount_received"),
                     sales=Count("id"),
@@ -138,17 +154,27 @@ class DashboardView(APIView):
                 .order_by("-total_value")
             )
 
+            reservations_by_seller = {
+                row["sale__seller_id"]: row["reservations"]
+                for row in (
+                    reservation_query
+                    .values("sale__seller_id")
+                    .annotate(reservations=Count("id"))
+                )
+            }
+
             sellers = [
                 {
                     "name": s["seller__name"],
                     "total": float(s["total_value"] or 0),
                     "sales": s["sales"],
+                    "reservations": reservations_by_seller.get(s["seller_id"], 0),
                 }
-                for s in sellers
+                for s in sellers_query
             ]
 
         customers = (
-            query.values("customer__name")
+            query.values("customer_id", "customer__name")
             .annotate(
                 total_value=Sum("amount_received"),
                 sales=Count("id"),
@@ -156,11 +182,21 @@ class DashboardView(APIView):
             .order_by("-total_value")
         )
 
+        reservations_by_customer = {
+            row["sale__customer_id"]: row["reservations"]
+            for row in (
+                reservation_query
+                .values("sale__customer_id")
+                .annotate(reservations=Count("id"))
+            )
+        }
+
         customers = [
             {
                 "name": c["customer__name"],
                 "total": float(c["total_value"] or 0),
                 "sales": c["sales"],
+                "reservations": reservations_by_customer.get(c["customer_id"], 0),
             }
             for c in customers
         ]
@@ -175,11 +211,16 @@ class DashboardView(APIView):
         start_date, end_date = get_date_range(request)
 
         query, mode = self.get_base_queryset(request, start_date, end_date)
+        reservation_query = self.get_reservation_queryset(
+            request,
+            start_date,
+            end_date
+        )
 
         data = {
-            "kpis": self.get_kpis(query, mode),
+            "kpis": self.get_kpis(query, reservation_query, mode),
             "charts": self.get_charts(query, start_date, end_date, mode),
-            "tables": self.get_tables(query, mode),
+            "tables": self.get_tables(query, reservation_query, mode),
             "mode": mode,
         }
 
