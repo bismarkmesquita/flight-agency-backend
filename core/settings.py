@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-IS_HEROKU_APP = "DYNO" in os.environ and "CI" not in os.environ
+IS_PRODUCTION = "RAILWAY_ENVIRONMENT" in os.environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -15,15 +15,18 @@ SECRET_KEY = os.environ.get(
     default=secrets.token_urlsafe(nbytes=64),
 )
 
-DEBUG = not IS_HEROKU_APP
+DEBUG = not IS_PRODUCTION
 
-if IS_HEROKU_APP:
-    ALLOWED_HOSTS = ["*"]
-else:
-    ALLOWED_HOSTS = [
-        "localhost",
-        "127.0.0.1",
-    ]
+ALLOWED_HOSTS = os.environ.get(
+    "ALLOWED_HOSTS", "localhost,127.0.0.1"
+).split(",")
+
+CSRF_TRUSTED_ORIGINS = (
+    os.environ.get("CSRF_TRUSTED_ORIGINS", "")
+    .split(",")
+) if os.environ.get("CSRF_TRUSTED_ORIGINS") else []
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 INSTALLED_APPS = [
     "grappelli",
@@ -46,6 +49,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -63,7 +67,9 @@ REST_FRAMEWORK = {
 
 GRAPPELLI_ADMIN_TITLE = "Flight Agency Admin"
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = (
+    os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+) if os.environ.get("CORS_ALLOWED_ORIGINS") else []
 
 ROOT_URLCONF = "core.urls"
 
@@ -90,7 +96,7 @@ if os.environ.get("DATABASE_URL"):
         "default": dj_database_url.config(
             conn_max_age=None,
             conn_health_checks=True,
-            ssl_require=IS_HEROKU_APP,
+            ssl_require=IS_PRODUCTION,
         ),
     }
 else:
