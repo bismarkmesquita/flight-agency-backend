@@ -3,7 +3,6 @@ from enum import Enum
 
 class LoginViewFailureReason(Enum):
     INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
-    INVALID_TURNSTILE_TOKEN = "INVALID_TURNSTILE_TOKEN"
 
 
 class CreateOrUpdateUserFailureReason(Enum):
