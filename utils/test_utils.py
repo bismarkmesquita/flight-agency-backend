@@ -7,11 +7,13 @@ from random import randint
 
 def get_auth_header(
     role=User.Role.SELLER,
+    access_level=User.AccessLevel.DEMO,
 ):
     user = User.objects.create_user(
         password="123456789",
         email=str(randint(0, 1000000000)) + "@test.com",
         role=role,
+        access_level=access_level,
         name=Faker().name(),
     )
 

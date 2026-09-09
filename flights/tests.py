@@ -3,6 +3,7 @@ from django.utils import timezone
 from core.tests import BaseTestCase
 from flights.failures import CreateFlightFailureReason
 from flights.models import Flight
+from rest_framework import status
 
 
 class GetAirlinesTests(BaseTestCase):
@@ -111,6 +112,19 @@ class CreateFlightTests(BaseTestCase):
             "Flight successfully registered."
         )
         self.assertEqual(Flight.objects.count(), 1)
+
+    def test_demo_user_cannot_create_flight(self):
+        Flight.objects.all().delete()
+        response = self.client.post(
+            "/flights/",
+            data=self.data,
+            headers=self.demo_token,
+        )
+
+        flights = Flight.objects.all().count()
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(flights, 0)
 
     def test_missing_fields(self):
         """Create flight without fields."""

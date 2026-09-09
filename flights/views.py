@@ -1,17 +1,18 @@
 import re
-from rest_framework import permissions
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.utils import timezone
 from django.db.models import Prefetch
 from django.utils.dateparse import parse_datetime
 from agency.models import Reservation
+from users.permissions import IsFullUser
 from .models import Airline, Airport, Flight
 from .failures import CreateFlightFailureReason
 
 
 class AirlinesView(APIView):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request):
         airlines = Airline.objects.all()
@@ -28,7 +29,7 @@ class AirlinesView(APIView):
 
 
 class AirportsView(APIView):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request):
         airports = Airport.objects.all()
@@ -48,7 +49,7 @@ class AirportsView(APIView):
 
 
 class NextFlightsView(APIView):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request):
         reservations_qs = (
@@ -116,7 +117,10 @@ class NextFlightsView(APIView):
 
 
 class FlightView(APIView):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (
+        IsAuthenticated,
+        IsFullUser,
+    )
 
     def post(self, request):
         data = request.data

@@ -10,15 +10,24 @@ class BaseTestCase(TestCase):
     def setUp(self):
         super().setUp()
 
-        self.admin_token, self.admin = get_auth_header(role=User.Role.ADMIN)
+        self.admin_token, self.admin = get_auth_header(
+            role=User.Role.ADMIN,
+            access_level=User.AccessLevel.FULL,
+        )
         self.manager_token, self.manager = get_auth_header(
-            role=User.Role.MANAGER
+            role=User.Role.MANAGER,
+            access_level=User.AccessLevel.FULL,
         )
         self.seller_token, self.seller = get_auth_header(
-            role=User.Role.SELLER
+            role=User.Role.SELLER,
+            access_level=User.AccessLevel.FULL,
         )
         self.issuer_token, self.issuer = get_auth_header(
-            role=User.Role.SELLER
+            role=User.Role.SELLER,
+            access_level=User.AccessLevel.FULL,
+        )
+        self.demo_token, self.demo_user = get_auth_header(
+            role=User.Role.SELLER,
         )
 
         self.customer = Customer.objects.create(

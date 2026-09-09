@@ -52,6 +52,7 @@ class Command(BaseCommand):
             password=self.default_password,
             name="Agency Admin",
             role=User.Role.ADMIN,
+            access_level=User.AccessLevel.FULL,
         )
 
         self.coordinator = User.objects.create_user(
@@ -59,6 +60,7 @@ class Command(BaseCommand):
             password="manager123",
             name="manager",
             role=User.Role.MANAGER,
+            access_level=User.AccessLevel.FULL,
         )
 
         self.seller = User.objects.create_user(
@@ -66,6 +68,7 @@ class Command(BaseCommand):
             password="seller123",
             name="Seller",
             role=User.Role.SELLER,
+            access_level=User.AccessLevel.FULL,
         )
 
         self.users = []
