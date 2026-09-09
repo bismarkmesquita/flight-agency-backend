@@ -24,7 +24,7 @@ class ReservationMixin:
             ],
             "sale": self.serialize_sale(reservation.sale),
             "issuer": self.serialize_user(reservation.issuer),
-            "supplier": self.serialize_user(reservation.supplier),
+            "supplier": self.serialize_supplier(reservation.supplier),
         }
 
     def serialize_flight(self, flight):
@@ -53,6 +53,13 @@ class ReservationMixin:
         return {
             "id": user_field.id,
             "name": user_field.name,
+        }
+
+    def serialize_supplier(self, supplier):
+        return {
+            "id": supplier.id,
+            "name": supplier.name,
+            "tax_id": supplier.tax_id,
         }
 
     def error_response(self, message, reason):
