@@ -10,10 +10,7 @@ IS_PRODUCTION = "RAILWAY_ENVIRONMENT" in os.environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    default=secrets.token_urlsafe(nbytes=64),
-)
+SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
 DEBUG = not IS_PRODUCTION
 
