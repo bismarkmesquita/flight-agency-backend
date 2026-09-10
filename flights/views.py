@@ -12,7 +12,7 @@ from .failures import CreateFlightFailureReason
 
 
 class AirlinesView(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = [IsAuthenticated,]
 
     def get(self, request):
         airlines = Airline.objects.all()
@@ -29,7 +29,7 @@ class AirlinesView(APIView):
 
 
 class AirportsView(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = [IsAuthenticated,]
 
     def get(self, request):
         airports = Airport.objects.all()
@@ -49,7 +49,7 @@ class AirportsView(APIView):
 
 
 class NextFlightsView(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = [IsAuthenticated,]
 
     def get(self, request):
         reservations_qs = (
@@ -117,10 +117,10 @@ class NextFlightsView(APIView):
 
 
 class FlightView(APIView):
-    permission_classes = (
+    permission_classes = [
         IsAuthenticated,
         IsFullUser,
-    )
+    ]
 
     def post(self, request):
         data = request.data

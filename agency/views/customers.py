@@ -1,15 +1,13 @@
 from django.db.models import Q
 from django.core.exceptions import ValidationError
-from rest_framework import permissions
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from agency.models import Customer
 from agency.failures import CreateCustomerFailureReason
+from core.views import BaseAPIView
 from core.utils import get_object_or_none
 from utils.validators import validate_email
 
 
-class CustomerMixin:
+class BaseCustomerView(BaseAPIView):
     def serializer(self, obj):
         return {
             "id": obj.id,
@@ -27,11 +25,10 @@ class CustomerMixin:
         ]
 
         if missing_fields:
-            return None, Response({
-                "success": False,
-                "message": f"Required fields: {', '.join(missing_fields)}",
-                "reason": CreateCustomerFailureReason.MISSING_FIELDS.value,
-            })
+            return None, self.error_response(
+                message=f"Required fields: {', '.join(missing_fields)}",
+                reason=CreateCustomerFailureReason.MISSING_FIELDS.value,
+            )
 
         name = data["name"]
         email = data["email"]
@@ -40,11 +37,10 @@ class CustomerMixin:
         try:
             validate_email(email)
         except ValidationError:
-            return None, Response({
-                "success": False,
-                "message": "The email address is not in a valid format.",
-                "reason": CreateCustomerFailureReason.INVALID_EMAIL.value,
-            })
+            return None, self.error_response(
+                message="The email address is not in a valid format.",
+                reason=CreateCustomerFailureReason.INVALID_EMAIL.value,
+            )
 
         existing = Customer.objects.filter(
             Q(email=email) | Q(phone=phone)
@@ -54,14 +50,10 @@ class CustomerMixin:
             existing = existing.exclude(id=customer_id)
 
         if existing.exists():
-            return None, Response({
-                "success": False,
-                "message": (
-                    "A customer already exists with an email "
-                    "address or phone number provided."
-                ),
-                "reason": CreateCustomerFailureReason.ALREADY_REGISTERED.value,
-            })
+            return None, self.error_response(
+                message="A customer already exists with an email address or phone number provided.",
+                reason=CreateCustomerFailureReason.ALREADY_REGISTERED.value,
+            )
 
         return {
             "name": name,
@@ -70,14 +62,12 @@ class CustomerMixin:
         }, None
 
 
-class CustomersView(CustomerMixin, APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-
+class CustomersView(BaseCustomerView):
     def get(self, request):
         customers = Customer.objects.all()
         data = [self.serializer(customer) for customer in customers]
 
-        return Response({"success": True, "items": data})
+        return self.success_response(data=data)
 
     def post(self, request):
         data, error = self.validate_data(request.data)
@@ -87,25 +77,21 @@ class CustomersView(CustomerMixin, APIView):
 
         customer = Customer.objects.create(**data)
 
-        return Response({
-            "success": True,
-            "message": "Customer successfully registered.",
-            "customer": self.serializer(customer),
-        })
+        return self.success_response(
+            data=self.serializer(customer),
+            message="Customer successfully registered.",
+        )
 
 
-class CustomerView(CustomerMixin, APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-
+class CustomerView(BaseCustomerView):
     def get_customer(self, id):
         return get_object_or_none(Customer, id=id)
 
     def customer_not_found(self):
-        return Response({
-            "success": False,
-            "message": "Customer not found.",
-            "reason": CreateCustomerFailureReason.INVALID_CUSTOMER.value,
-        })
+        return self.error_response(
+            message="Customer not found.",
+            reason=CreateCustomerFailureReason.INVALID_CUSTOMER.value,
+        )
 
     def get(self, request, id):
         customer = self.get_customer(id)
@@ -113,10 +99,9 @@ class CustomerView(CustomerMixin, APIView):
         if not customer:
             return self.customer_not_found()
 
-        return Response({
-            "success": True,
-            "customer": self.serializer(customer),
-        })
+        data = self.serializer(customer)
+
+        return self.success_response(data=data)
 
     def put(self, request, id):
         customer = self.get_customer(id)
@@ -133,11 +118,10 @@ class CustomerView(CustomerMixin, APIView):
         customer.phone = data["phone"]
         customer.save()
 
-        return Response({
-            "success": True,
-            "message": "Customer updated successfully.",
-            "customer": self.serializer(customer),
-        })
+        return self.success_response(
+            data=self.serializer(customer),
+            message="Customer successfully registered.",
+        )
 
     def delete(self, request, id):
         customer = self.get_customer(id)
@@ -148,7 +132,6 @@ class CustomerView(CustomerMixin, APIView):
         customer.is_active = False
         customer.save()
 
-        return Response({
-            "success": True,
-            "message": "Customer deleted successfully.",
-        })
+        return self.success_response(
+            message="Customer deleted successfully.",
+        )
