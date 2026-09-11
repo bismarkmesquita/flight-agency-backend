@@ -105,19 +105,19 @@ class CreateReservationTests(BaseTestCase):
         self.assertEqual(reservation.flights.first().id, self.flight.id)
 
     def test_demo_user_cannot_create_reservation(self):
-            Reservation.objects.all().delete()
-            Sale.objects.all().delete()
-    
-            response = self.client.post(
-                self.url,
-                data=self.data,
-                headers=self.demo_token,
-            )
-    
-            reservations = Reservation.objects.all().count()
-    
-            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-            self.assertEqual(reservations, 0)
+        Reservation.objects.all().delete()
+        Sale.objects.all().delete()
+
+        response = self.client.post(
+            self.url,
+            data=self.data,
+            headers=self.demo_token,
+        )
+
+        reservations = Reservation.objects.all().count()
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(reservations, 0)
 
     def test_missing_fields(self):
         """Required fields are missing"""
