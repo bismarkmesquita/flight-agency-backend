@@ -16,7 +16,7 @@ class GetAirlinesTests(BaseTestCase):
             "/flights/airlines/", headers=self.admin_token)
 
         self.assertTrue(response.data["success"])
-        self.assertEqual(len(response.data["airlines"]), 1)
+        self.assertEqual(len(response.data["data"]), 1)
 
     def test_cannot_access_whithout_auth(self):
         """try accessing without authentication."""
@@ -35,7 +35,7 @@ class GetAirportsTests(BaseTestCase):
             "/flights/airports/", headers=self.admin_token)
 
         self.assertTrue(response.data["success"])
-        self.assertEqual(len(response.data["airports"]), 2)
+        self.assertEqual(len(response.data["data"]), 2)
 
     def test_cannot_access_whithout_auth(self):
         """try accessing without authentication."""
@@ -66,7 +66,7 @@ class NextFlightsTests(BaseTestCase):
         )
 
         self.assertTrue(response.data["success"])
-        self.assertEqual(len(response.data["flights"]), 1)
+        self.assertEqual(len(response.data["data"]), 1)
 
     def test_cannot_access_whithout_auth(self):
         """try accessing without authentication."""

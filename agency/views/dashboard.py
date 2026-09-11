@@ -1,9 +1,7 @@
 from django.db.models import Sum, Count, F
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import permissions
 from datetime import date, timedelta, datetime
 from agency.models import Reservation, Sale
+from core.views import BaseAPIView
 from users.models import User
 
 
@@ -37,9 +35,7 @@ def get_date_range(request):
     return today - timedelta(days=6), today
 
 
-class DashboardView(APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-
+class DashboardView(BaseAPIView):
     def get_base_queryset(self, request, start_date, end_date):
         query = Sale.objects.filter(
             sale_date__range=[start_date, end_date]
@@ -224,4 +220,4 @@ class DashboardView(APIView):
             "mode": mode,
         }
 
-        return Response({"success": True, "data": data})
+        return self.success_response(data=data)

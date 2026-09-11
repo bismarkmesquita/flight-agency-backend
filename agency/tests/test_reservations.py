@@ -18,9 +18,9 @@ class GetReservationsTests(BaseTestCase):
         )
 
         self.assertTrue(response.data["success"])
-        self.assertEqual(len(response.data["items"]), 1)
+        self.assertEqual(len(response.data["data"]), 1)
 
-        reservation = response.data["items"][0]
+        reservation = response.data["data"][0]
         self.assertEqual(
             reservation["locator"],
             self.reservation.locator,
@@ -262,6 +262,6 @@ class CreateReservationTests(BaseTestCase):
 
         self.assertTrue(response.data["success"])
 
-        sale = Sale.objects.get(id=response.data["sale_id"])
+        sale = Sale.objects.get(id=response.data["data"]["sale_id"])
 
         self.assertEqual(sale.seller, self.seller)

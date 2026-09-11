@@ -248,7 +248,7 @@ class GetUsersViewTests(BaseUsersTestCase):
         response = self.client.get("/auth/users/", headers=self.admin_token)
 
         self.assertTrue(response.data["success"])
-        self.assertEqual(len(response.data["users"]), 3)
+        self.assertEqual(len(response.data["data"]), 4)
 
     def test_cannot_access_whithout_auth(self):
         # try accessing without authentication.

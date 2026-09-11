@@ -1,8 +1,6 @@
-from rest_framework.views import APIView
-from rest_framework import permissions
-from rest_framework.response import Response
 from django.db import transaction
 from django.db.models import Prefetch
+from core.views import BaseAPIView
 from core.utils import get_object_or_none
 from users.models import User
 from flights.models import Flight
@@ -12,7 +10,7 @@ from decimal import Decimal, InvalidOperation
 from django.utils.dateparse import parse_date
 
 
-class ReservationMixin:
+class BaseReservationView(BaseAPIView):
     def serialize_reservation(self, reservation):
         return {
             "id": reservation.id,
@@ -62,27 +60,20 @@ class ReservationMixin:
             "tax_id": supplier.tax_id,
         }
 
-    def error_response(self, message, reason):
-        return Response({
-            "success": False,
-            "message": message,
-            "reason": reason,
-        })
-
     def validate_data(self, data, user):
         sale_data = data.get("sale")
         reservation_data = data.get("reservation")
 
         if not isinstance(sale_data, dict):
             return None, self.error_response(
-                "Sale data must be an object.",
-                CreateReservationFailureReason.MISSING_FIELDS.value,
+                message="Sale data must be an object.",
+                reason=CreateReservationFailureReason.MISSING_FIELDS.value,
             )
 
         if not isinstance(reservation_data, dict):
             return None, self.error_response(
-                "Reservation data must be an object.",
-                CreateReservationFailureReason.MISSING_FIELDS.value,
+                message="Reservation data must be an object.",
+                reason=CreateReservationFailureReason.MISSING_FIELDS.value,
             )
 
         sale_required_fields = [
@@ -111,8 +102,8 @@ class ReservationMixin:
 
         if missing_sale_fields:
             return None, self.error_response(
-                f"Required sale fields: {', '.join(missing_sale_fields)}",
-                CreateReservationFailureReason.MISSING_FIELDS.value,
+                message=f"Required sale fields: {', '.join(missing_sale_fields)}",
+                reason=CreateReservationFailureReason.MISSING_FIELDS.value,
             )
 
         missing_reservation_fields = [
@@ -123,8 +114,8 @@ class ReservationMixin:
 
         if missing_reservation_fields:
             return None, self.error_response(
-                f"Required reservation fields: {', '.join(missing_reservation_fields)}",
-                CreateReservationFailureReason.MISSING_FIELDS.value,
+                message=f"Required reservation fields: {', '.join(missing_reservation_fields)}",
+                reason=CreateReservationFailureReason.MISSING_FIELDS.value,
             )
 
         # Validade sale values
@@ -135,20 +126,20 @@ class ReservationMixin:
             cost = Decimal(str(cost))
         except InvalidOperation:
             return None, self.error_response(
-                "Invalid numeric values.",
-                CreateReservationFailureReason.VALIDATION_ERROR.value,
+                message="Invalid numeric values.",
+                reason=CreateReservationFailureReason.VALIDATION_ERROR.value,
             )
 
         if amount_received <= 0:
             return None, self.error_response(
-                "Amount received must be greater than zero.",
-                CreateReservationFailureReason.VALIDATION_ERROR.value,
+                message="Amount received must be greater than zero.",
+                reason=CreateReservationFailureReason.VALIDATION_ERROR.value,
             )
 
         if cost < 0:
             return None, self.error_response(
-                "Cost cannot be negative.",
-                CreateReservationFailureReason.VALIDATION_ERROR.value,
+                message="Cost cannot be negative.",
+                reason=CreateReservationFailureReason.VALIDATION_ERROR.value,
             )
 
         # Validade seller
@@ -159,24 +150,24 @@ class ReservationMixin:
 
             if not seller:
                 return None, self.error_response(
-                    "Seller not found.",
-                    CreateReservationFailureReason.OBJECT_NOT_FOUND.value
+                    message="Seller not found.",
+                    reason=CreateReservationFailureReason.OBJECT_NOT_FOUND.value,
                 )
 
         # Validade customer
         customer = get_object_or_none(Customer, id=sale_data["customer_id"])
         if not customer:
             return None, self.error_response(
-                "Customer not found.",
-                CreateReservationFailureReason.OBJECT_NOT_FOUND.value
+                message="Customer not found.",
+                reason=CreateReservationFailureReason.OBJECT_NOT_FOUND.value,
             )
 
         # Validate sale date
         sale_date = parse_date(sale_data["sale_date"])
         if not sale_date:
             return None, self.error_response(
-                "Invalid sale date.",
-                CreateReservationFailureReason.VALIDATION_ERROR.value,
+                message="Invalid sale date.",
+                reason=CreateReservationFailureReason.VALIDATION_ERROR.value,
             )
 
         # Validade supplier
@@ -184,8 +175,8 @@ class ReservationMixin:
         supplier = get_object_or_none(Supplier, id=supplier_id)
         if not supplier:
             return None, self.error_response(
-                "Supplier not found.",
-                CreateReservationFailureReason.OBJECT_NOT_FOUND.value
+                message="Supplier not found.",
+                reason=CreateReservationFailureReason.OBJECT_NOT_FOUND.value,
             )
 
         # Validade issuer
@@ -193,16 +184,16 @@ class ReservationMixin:
         issuer = get_object_or_none(User, id=issuer_id)
         if not issuer:
             return None, self.error_response(
-                "Issuer not found.",
-                CreateReservationFailureReason.OBJECT_NOT_FOUND.value
+                message="Issuer not found.",
+                reason=CreateReservationFailureReason.OBJECT_NOT_FOUND.value,
             )
 
         # Validade locator
         locator = reservation_data["locator"]
         if Reservation.objects.filter(locator=locator).exists():
             return None, self.error_response(
-                "A reservation already exists with the provided locator number.",
-                CreateReservationFailureReason.ALREADY_REGISTERED.value
+                message="A reservation already exists with the provided locator number.",
+                reason=CreateReservationFailureReason.ALREADY_REGISTERED.value,
             )
 
         # Validade flights
@@ -210,8 +201,8 @@ class ReservationMixin:
         flights = list(Flight.objects.filter(id__in=set(flight_ids)))
         if len(flights) != len(set(flight_ids)):
             return None, self.error_response(
-                "One or more flights do not exist.",
-                CreateReservationFailureReason.OBJECT_NOT_FOUND.value
+                message="One or more flights do not exist.",
+                reason=CreateReservationFailureReason.OBJECT_NOT_FOUND.value,
             )
 
         passengers = reservation_data.get("passengers")
@@ -239,9 +230,7 @@ class ReservationMixin:
         }, None
 
 
-class ReservationsView(ReservationMixin, APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-
+class ReservationsView(BaseReservationView):
     def get(self, request):
         flights = (
             Flight.objects
@@ -273,7 +262,7 @@ class ReservationsView(ReservationMixin, APIView):
             reservations = reservations.filter(sale__seller=request.user)
 
         data = [self.serialize_reservation(r) for r in reservations]
-        return Response({"success": True, "items": data})
+        return self.success_response(data=data)
 
     def post(self, request):
         data, error = self.validate_data(request.data, request.user)
@@ -295,9 +284,10 @@ class ReservationsView(ReservationMixin, APIView):
 
             reservation.flights.set(flights)
 
-        return Response({
-            "success": True,
-            "message": "Reservation successfully registered.",
-            "reservation_id": reservation.id,
-            "sale_id": sale.id,
-        })
+        return self.success_response(
+            data={
+                "reservation_id": reservation.id,
+                "sale_id": sale.id,
+            },
+            message="Reservation successfully registered.",
+        )

@@ -13,7 +13,7 @@ class GetSuppliersTests(BaseTestCase):
             "/agency/suppliers/", headers=self.admin_token)
 
         self.assertTrue(response.data["success"])
-        self.assertEqual(len(response.data["suppliers"]), 1)
+        self.assertEqual(len(response.data["data"]), 1)
 
     def test_cannot_access_without_auth(self):
         """try accessing without authentication."""
@@ -70,7 +70,7 @@ class CreateSupplierTests(BaseTestCase):
         self.assertTrue(data["success"])
 
         supplier = Supplier.objects.get(tax_id=self.data["tax_id"])
-        self.assertEqual(supplier.id, data["supplier_id"])
+        self.assertEqual(supplier.id, data["data"]["id"])
 
     def test_missing_fields(self):
         """Create supplier without required fields."""
@@ -125,7 +125,7 @@ class GetSupplierTests(BaseTestCase):
 
         self.assertTrue(response.data["success"])
         self.assertEqual(
-            response.data["supplier"]["id"],
+            response.data["data"]["id"],
             self.supplier.id,
         )
 
