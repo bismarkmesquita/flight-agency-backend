@@ -1,6 +1,7 @@
 from agency.failures import CreateSupplierFailureReason, SupplierFailureReason
-from agency.models import Supplier
+from agency.models import Reservation, Supplier
 from core.tests import BaseTestCase
+from rest_framework import status
 
 
 class GetSuppliersTests(BaseTestCase):
@@ -71,6 +72,21 @@ class CreateSupplierTests(BaseTestCase):
 
         supplier = Supplier.objects.get(tax_id=self.data["tax_id"])
         self.assertEqual(supplier.id, data["data"]["id"])
+
+    def test_demo_user_cannot_create_supplier(self):
+        Reservation.objects.all().delete()
+        Supplier.objects.all().delete()
+
+        response = self.client.post(
+            self.url,
+            data=self.data,
+            headers=self.demo_token,
+        )
+
+        suppliers = Supplier.objects.all().count()
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(suppliers, 0)
 
     def test_missing_fields(self):
         """Create supplier without required fields."""
@@ -194,6 +210,16 @@ class UpdateSupplierTests(BaseTestCase):
         self.assertEqual(self.supplier.name, self.data["name"])
         self.assertEqual(self.supplier.phone, self.data["phone"])
 
+    def test_demo_user_cannot_update_supplier(self):
+        response = self.client.post(
+            self.get_url(self.supplier.id),
+            data=self.data,
+            headers=self.demo_token,
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+
     def test_update_supplier_not_found(self):
         """Trying to update a non-existing supplier."""
 
@@ -299,6 +325,17 @@ class DeleteSupplierTests(BaseTestCase):
 
         self.supplier.refresh_from_db()
         self.assertFalse(self.supplier.is_active)
+
+    def test_demo_user_cannot_delete_supplier(self):
+        response = self.client.delete(
+            self.get_url(self.supplier.id),
+            headers=self.demo_token,
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+        self.supplier.refresh_from_db()
+        self.assertTrue(self.supplier.is_active)
 
     def test_delete_supplier_not_found(self):
         response = self.client.delete(
