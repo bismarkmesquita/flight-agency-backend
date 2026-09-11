@@ -12,10 +12,12 @@ class BaseAPIView(APIView):
     restrict_write_to_full_user = True
 
     def get_permissions(self):
-        if self.restrict_write_to_full_user and self.request.method in WRITE_METHODS:
-            return [IsAuthenticated(), IsFullUser()]
+        permissions = [permission() for permission in self.permission_classes]
 
-        return [permission() for permission in self.permission_classes]
+        if self.restrict_write_to_full_user and self.request.method in WRITE_METHODS:
+            permissions.append(IsFullUser())
+
+        return permissions
 
     def error_response(self, *, message, reason, errors=None):
         return Response({
