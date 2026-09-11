@@ -29,6 +29,7 @@ jobs:
 
     env:
       DJANGO_SETTINGS_MODULE: core.settings
+      DJANGO_SECRET_KEY: ci-test-secret-key-not-for-production
       POSTGRES_DB: django_test_db
       POSTGRES_USER: django
       POSTGRES_PASSWORD: password
