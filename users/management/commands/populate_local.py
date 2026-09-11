@@ -71,6 +71,14 @@ class Command(BaseCommand):
             access_level=User.AccessLevel.FULL,
         )
 
+        self.demo = User.objects.create_user(
+            email="demo@agency.dev",
+            password="demo123",
+            name="demo",
+            role=User.Role.MANAGER,
+            access_level=User.AccessLevel.DEMO,
+        )
+
         self.users = []
         for i in range(50):
             user = User(
