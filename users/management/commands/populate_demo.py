@@ -34,7 +34,7 @@ class Command(BaseCommand):
         Supplier.objects.all().delete()
         Customer.objects.all().delete()
         Airline.objects.all().delete()
-        User.objects.all().delete()
+        User.objects.exclude(email="bismark1816@gmail.com").delete()
 
         self.gen_users()
         self.gen_airlines()
