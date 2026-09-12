@@ -19,7 +19,7 @@ class UserAdmin(BaseAdmin):
         "is_superuser",
     ]
     readonly_fields = ["last_access"]
-    list_filter = ["role"]
+    list_filter = ["access_level", "role"]
 
     def has_view_permission(self, request, obj=None):
         if (

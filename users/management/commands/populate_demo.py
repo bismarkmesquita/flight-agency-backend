@@ -2,7 +2,6 @@ import os
 import random
 import string
 from faker import Faker
-from django.conf import settings
 from django.core.management import BaseCommand
 from django.utils import timezone
 from agency.models import Customer, Reservation, Sale, Supplier
@@ -11,15 +10,18 @@ from users.models import User
 
 
 class Command(BaseCommand):
-    help = "Populate local database with some data"
+    help = "Populate database with some demo data"
     faker = Faker()
     default_password = "agency"
 
     def handle(self, *args, **kwargs):
         cmd_start = timezone.now()
 
-        if not settings.DEBUG or os.environ.get("DATABASE_URL"):
-            print("This command can only be run in DEBUG mode")
+        if not os.environ.get("ALLOW_POPULATE_DEMO"):
+            print(
+                "Refusing to run: set ALLOW_POPULATE_DEMO=1 to confirm "
+                "this wipes and reseeds the database."
+            )
             return
 
         self.now = timezone.now()
@@ -47,20 +49,11 @@ class Command(BaseCommand):
         print("\nPopulated in {} seconds.\n".format(timetaken.seconds))
 
     def gen_users(self):
-        self.superuser = User.objects.create_superuser(
-            email="agency@agency.com",
-            password=self.default_password,
-            name="Agency Admin",
-            role=User.Role.ADMIN,
-            access_level=User.AccessLevel.FULL,
-        )
-
         self.coordinator = User.objects.create_user(
             email="manager@agency.dev",
             password="manager123",
             name="manager",
             role=User.Role.MANAGER,
-            access_level=User.AccessLevel.FULL,
         )
 
         self.seller = User.objects.create_user(
@@ -68,15 +61,6 @@ class Command(BaseCommand):
             password="seller123",
             name="Seller",
             role=User.Role.SELLER,
-            access_level=User.AccessLevel.FULL,
-        )
-
-        self.demo = User.objects.create_user(
-            email="demo@agency.dev",
-            password="demo123",
-            name="demo",
-            role=User.Role.MANAGER,
-            access_level=User.AccessLevel.DEMO,
         )
 
         self.users = []
