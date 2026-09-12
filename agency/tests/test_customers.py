@@ -1,6 +1,7 @@
 from agency.failures import CreateCustomerFailureReason
-from agency.models import Customer
+from agency.models import Customer, Reservation, Sale
 from core.tests import BaseTestCase
+from rest_framework import status
 
 
 class GetCustomersTests(BaseTestCase):
@@ -16,7 +17,7 @@ class GetCustomersTests(BaseTestCase):
         )
 
         self.assertTrue(response.data["success"])
-        self.assertEqual(len(response.data["items"]), 1)
+        self.assertEqual(len(response.data["data"]), 1)
 
     def test_cannot_access_whithout_auth(self):
         """try accessing without authentication."""
@@ -41,7 +42,7 @@ class GetCustomerTests(BaseTestCase):
 
         self.assertTrue(response.data["success"])
         self.assertEqual(
-            response.data["customer"]["id"],
+            response.data["data"]["id"],
             self.customer.id,
         )
 
@@ -82,6 +83,14 @@ class DeleteCustomerTests(BaseTestCase):
 
         self.customer.refresh_from_db()
         self.assertFalse(self.customer.is_active)
+
+    def test_demo_user_cannot_delete_customer(self):
+        response = self.client.delete(
+            self.get_url(self.customer.id),
+            headers=self.demo_token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_delete_customer_not_found(self):
         response = self.client.delete(
@@ -128,6 +137,22 @@ class CreateCustomerTests(BaseTestCase):
         self.assertTrue(
             Customer.objects.filter(email=self.data["email"]).exists()
         )
+
+    def test_demo_user_cannot_create_customer(self):
+        Reservation.objects.all().delete()
+        Sale.objects.all().delete()
+        Customer.objects.all().delete()
+
+        response = self.client.post(
+            self.url,
+            data=self.data,
+            headers=self.demo_token,
+        )
+
+        customers = Customer.objects.all().count()
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(customers, 0)
 
     def test_missing_fields(self):
         """Create customer without required fields."""
@@ -218,6 +243,22 @@ class UpdateCustomerTests(BaseTestCase):
         self.assertEqual(self.customer.name, updated_data["name"])
         self.assertEqual(self.customer.email, updated_data["email"])
         self.assertEqual(self.customer.phone, updated_data["phone"])
+
+    def test_demo_user_cannot_update_customer(self):
+        updated_data = {
+            "name": "Updated Name",
+            "email": "updated@example.com",
+            "phone": "+5511888888888",
+        }
+
+        response = self.client.put(
+            self.get_url(self.customer.id),
+            data=updated_data,
+            headers=self.demo_token,
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_update_customer_not_found(self):
         """Trying to update a non-existing customer."""

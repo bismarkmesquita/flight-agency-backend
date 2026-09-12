@@ -1,6 +1,7 @@
 from agency.failures import CreateReservationFailureReason
 from agency.models import Reservation, Sale
 from core.tests import BaseTestCase
+from rest_framework import status
 
 
 class GetReservationsTests(BaseTestCase):
@@ -18,9 +19,9 @@ class GetReservationsTests(BaseTestCase):
         )
 
         self.assertTrue(response.data["success"])
-        self.assertEqual(len(response.data["items"]), 1)
+        self.assertEqual(len(response.data["data"]), 1)
 
-        reservation = response.data["items"][0]
+        reservation = response.data["data"][0]
         self.assertEqual(
             reservation["locator"],
             self.reservation.locator,
@@ -102,6 +103,21 @@ class CreateReservationTests(BaseTestCase):
         self.assertEqual(reservation.passengers, "Passenger 1, Passenger 2")
         self.assertEqual(reservation.flights.count(), 1)
         self.assertEqual(reservation.flights.first().id, self.flight.id)
+
+    def test_demo_user_cannot_create_reservation(self):
+        Reservation.objects.all().delete()
+        Sale.objects.all().delete()
+
+        response = self.client.post(
+            self.url,
+            data=self.data,
+            headers=self.demo_token,
+        )
+
+        reservations = Reservation.objects.all().count()
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(reservations, 0)
 
     def test_missing_fields(self):
         """Required fields are missing"""
@@ -262,6 +278,6 @@ class CreateReservationTests(BaseTestCase):
 
         self.assertTrue(response.data["success"])
 
-        sale = Sale.objects.get(id=response.data["sale_id"])
+        sale = Sale.objects.get(id=response.data["data"]["sale_id"])
 
         self.assertEqual(sale.seller, self.seller)

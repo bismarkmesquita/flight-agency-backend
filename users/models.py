@@ -12,6 +12,10 @@ class User(BaseModel, AbstractUser):
         MANAGER = "manager", _("Manager")
         SELLER = "seller", _("Seller")
 
+    class AccessLevel(models.TextChoices):
+        DEMO = "DEMO"
+        FULL = "FULL"
+
     username = None
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=255)
@@ -21,6 +25,11 @@ class User(BaseModel, AbstractUser):
         max_length=20,
         choices=Role.choices,
         default=Role.SELLER,
+    )
+    access_level = models.CharField(
+        max_length=10,
+        choices=AccessLevel.choices,
+        default=AccessLevel.DEMO
     )
 
     USERNAME_FIELD = "email"

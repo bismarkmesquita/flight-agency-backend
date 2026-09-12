@@ -1,15 +1,13 @@
 from django.db.models import Q
-from rest_framework import permissions
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from agency.models import Supplier
 from agency.failures import CreateSupplierFailureReason, SupplierFailureReason
+from core.views import BaseAPIView
 from core.utils import get_object_or_none
 from users.models import User
 from users.permissions import HasRole
 
 
-class SupplierMixin:
+class BaseSupplierView(BaseAPIView):
     def serializer(self, obj):
         return {
             "id": obj.id,
@@ -25,13 +23,6 @@ class SupplierMixin:
             "address_number": obj.address_number,
             "complement": obj.complement
         }
-
-    def error_response(self, message, reason):
-        return Response({
-            "success": False,
-            "message": message,
-            "reason": reason,
-        })
 
     def validate_data(self, data, supplier_id=None):
         required_fields = [
@@ -54,8 +45,8 @@ class SupplierMixin:
 
         if missing_fields:
             return None, self.error_response(
-                f"Required fields: {', '.join(missing_fields)}",
-                CreateSupplierFailureReason.MISSING_FIELDS.value,
+                message=f"Required fields: {', '.join(missing_fields)}",
+                reason=CreateSupplierFailureReason.MISSING_FIELDS.value,
             )
 
         name = data["name"]
@@ -84,9 +75,11 @@ class SupplierMixin:
 
         if existing.exists():
             return None, self.error_response(
-                "A supplier already exists with the"
-                "provided phone number or tax ID.",
-                CreateSupplierFailureReason.ALREADY_REGISTERED.value,
+                message=(
+                    "A supplier already exists with the "
+                    "provided phone number or tax ID."
+                ),
+                reason=CreateSupplierFailureReason.ALREADY_REGISTERED.value,
             )
 
         return {
@@ -104,17 +97,15 @@ class SupplierMixin:
         }, None
 
 
-class SuppliersView(SupplierMixin, APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-
+class SuppliersView(BaseSupplierView):
     def get(self, request):
         suppliers = Supplier.objects.all().order_by("name")
         data = [self.serializer(supplier) for supplier in suppliers]
 
-        return Response({"success": True, "suppliers": data})
+        return self.success_response(data=data)
 
 
-class CreateSupplierView(SupplierMixin, APIView):
+class CreateSupplierView(BaseSupplierView):
     permission_classes = (HasRole,)
     ALLOWED_ROLES = [
         User.Role.ADMIN,
@@ -129,14 +120,13 @@ class CreateSupplierView(SupplierMixin, APIView):
 
         supplier = Supplier.objects.create(**validated_data)
 
-        return Response({
-            "success": True,
-            "message": "Supplier successfully registered.",
-            "supplier": self.serializer(supplier),
-        })
+        return self.success_response(
+            data=self.serializer(supplier),
+            message="Supplier successfully registered.",
+        )
 
 
-class SupplierView(SupplierMixin, APIView):
+class SupplierView(BaseSupplierView):
     permission_classes = (HasRole,)
     ALLOWED_ROLES = [
         User.Role.ADMIN,
@@ -148,8 +138,8 @@ class SupplierView(SupplierMixin, APIView):
 
     def supplier_not_found(self):
         return self.error_response(
-            "Supplier not found.",
-            SupplierFailureReason.INVALID_SUPPLIER.value,
+            message="Supplier not found.",
+            reason=SupplierFailureReason.INVALID_SUPPLIER.value,
         )
 
     def get(self, request, id):
@@ -158,10 +148,7 @@ class SupplierView(SupplierMixin, APIView):
         if not supplier:
             return self.supplier_not_found()
 
-        return Response({
-            "success": True,
-            "supplier": self.serializer(supplier),
-        })
+        return self.success_response(data=self.serializer(supplier))
 
     def put(self, request, id):
         supplier = self.get_supplier(id)
@@ -178,11 +165,10 @@ class SupplierView(SupplierMixin, APIView):
 
         supplier.save()
 
-        return Response({
-            "success": True,
-            "message": "Supplier updated successfully.",
-            "supplier": self.serializer(supplier),
-        })
+        return self.success_response(
+            data=self.serializer(supplier),
+            message="Supplier updated successfully.",
+        )
 
     def delete(self, request, id):
         supplier = self.get_supplier(id)
@@ -193,7 +179,6 @@ class SupplierView(SupplierMixin, APIView):
         supplier.is_active = False
         supplier.save()
 
-        return Response({
-            "success": True,
-            "message": "Supplier deleted successfully.",
-        })
+        return self.success_response(
+            message="Supplier deleted successfully.",
+        )

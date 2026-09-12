@@ -1,23 +1,19 @@
 import re
-from rest_framework import permissions
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from django.utils import timezone
 from django.db.models import Prefetch
 from django.utils.dateparse import parse_datetime
 from agency.models import Reservation
+from core.views import BaseAPIView
 from .models import Airline, Airport, Flight
 from .failures import CreateFlightFailureReason
 
 
-class AirlinesView(APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-
+class AirlinesView(BaseAPIView):
     def get(self, request):
         airlines = Airline.objects.all()
         data = [self.serializer(airline) for airline in airlines]
 
-        return Response({"success": True, "airlines": data})
+        return self.success_response(data=data)
 
     def serializer(self, obj):
         return {
@@ -27,14 +23,12 @@ class AirlinesView(APIView):
         }
 
 
-class AirportsView(APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-
+class AirportsView(BaseAPIView):
     def get(self, request):
         airports = Airport.objects.all()
         data = [self.serializer(airline) for airline in airports]
 
-        return Response({"success": True, "airports": data})
+        return self.success_response(data=data)
 
     def serializer(self, obj):
         return {
@@ -47,9 +41,7 @@ class AirportsView(APIView):
         }
 
 
-class NextFlightsView(APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-
+class NextFlightsView(BaseAPIView):
     def get(self, request):
         reservations_qs = (
             Reservation.objects
@@ -79,7 +71,7 @@ class NextFlightsView(APIView):
         )
         data = [self.serialize_flight(flight) for flight in flights]
 
-        return Response({"success": True, "flights": data})
+        return self.success_response(data=data)
 
     def serialize_reservation(self, obj):
         return {
@@ -115,9 +107,7 @@ class NextFlightsView(APIView):
         }
 
 
-class FlightView(APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-
+class FlightView(BaseAPIView):
     def post(self, request):
         data = request.data
 
@@ -133,12 +123,9 @@ class FlightView(APIView):
             field for field in required_fields if not data.get(field)
         ]
         if missing_fields:
-            return Response(
-                {
-                    "success": False,
-                    "message": f"Required fields: {', '.join(missing_fields)}",
-                    "reason": CreateFlightFailureReason.MISSING_FIELDS.value,
-                }
+            return self.error_response(
+                message=f"Required fields: {', '.join(missing_fields)}",
+                reason=CreateFlightFailureReason.MISSING_FIELDS.value,
             )
 
         flight_number = data["flight_number"]
@@ -150,30 +137,21 @@ class FlightView(APIView):
         parsed_arrival_date = parse_datetime(data.get("arrival_date"))
 
         if not re.match(r"^\d{1,4}$", str(flight_number)):
-            return Response(
-                {
-                    "success": False,
-                    "message": "Invalid flight number.",
-                    "reason": CreateFlightFailureReason.INVALID_FLIGHT_NUMBER.value,
-                }
+            return self.error_response(
+                message="Invalid flight number.",
+                reason=CreateFlightFailureReason.INVALID_FLIGHT_NUMBER.value,
             )
 
         if departure_airport_id == arrival_airport_id:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Choose different airports.",
-                    "reason": CreateFlightFailureReason.INVALID_AIRPORT.value,
-                }
+            return self.error_response(
+                message="Choose different airports.",
+                reason=CreateFlightFailureReason.INVALID_AIRPORT.value,
             )
 
         if not parsed_arrival_date or not parsed_departure_date:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Invalid dates.",
-                    "reason": CreateFlightFailureReason.INVALID_DATE.value
-                }
+            return self.error_response(
+                message="Invalid dates.",
+                reason=CreateFlightFailureReason.INVALID_DATE.value,
             )
 
         if timezone.is_naive(parsed_departure_date):
@@ -183,35 +161,26 @@ class FlightView(APIView):
             parsed_arrival_date = timezone.make_aware(parsed_arrival_date)
 
         if parsed_arrival_date <= parsed_departure_date:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Arrival date must be after departure date.",
-                    "reason": CreateFlightFailureReason.INVALID_DATE.value,
-                }
+            return self.error_response(
+                message="Arrival date must be after departure date.",
+                reason=CreateFlightFailureReason.INVALID_DATE.value,
             )
 
         try:
             airline = Airline.objects.get(id=airline_id)
         except Airline.DoesNotExist:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Airline not found.",
-                    "reason": CreateFlightFailureReason.INVALID_AIRLINE.value,
-                }
+            return self.error_response(
+                message="Airline not found.",
+                reason=CreateFlightFailureReason.INVALID_AIRLINE.value,
             )
 
         try:
             departure_airport = Airport.objects.get(id=departure_airport_id)
             arrival_airport = Airport.objects.get(id=arrival_airport_id)
         except Airport.DoesNotExist:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Invalid airport.",
-                    "reason": CreateFlightFailureReason.INVALID_AIRPORT.value,
-                }
+            return self.error_response(
+                message="Invalid airport.",
+                reason=CreateFlightFailureReason.INVALID_AIRPORT.value,
             )
 
         existing_flight = Flight.objects.filter(
@@ -221,12 +190,9 @@ class FlightView(APIView):
         ).exists()
 
         if existing_flight:
-            return Response(
-                {
-                    "success": False,
-                    "message": "There is already a flight with the IATA code and dates provided.",
-                    "reason": CreateFlightFailureReason.ALREADY_REGISTERED.value
-                }
+            return self.error_response(
+                message="There is already a flight with the IATA code and dates provided.",
+                reason=CreateFlightFailureReason.ALREADY_REGISTERED.value,
             )
 
         flight = Flight.objects.create(
@@ -238,11 +204,10 @@ class FlightView(APIView):
             arrival_airport=arrival_airport,
         )
 
-        return Response({
-            "success": True,
-            "message": "Flight successfully registered.",
-            "flight": self.serializer(flight, departure_airport, arrival_airport),
-        })
+        return self.success_response(
+            data=self.serializer(flight, departure_airport, arrival_airport),
+            message="Flight successfully registered.",
+        )
 
     def serializer(self, flight, departure_airport, arrival_airport):
         return {

@@ -9,5 +9,6 @@ class UserSerializer(ModelSerializer):
         fields = (
             "name",
             "email",
-            "role"
+            "role",
+            "access_level",
         )
